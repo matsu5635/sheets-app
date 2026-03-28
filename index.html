@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>スプレッドシート検索・編集</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <style>
   :root {
     --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3350;
@@ -28,28 +28,40 @@
   }
   input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.12); }
   input[type="text"]::placeholder { color: var(--text3); }
+
   .btn-group { display: flex; gap: 8px; margin-top: 10px; }
-  .btn { border: none; border-radius: 10px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 14px; padding: 12px 18px; transition: all 0.2s; white-space: nowrap; flex: 1; }
+  .btn { border: none; border-radius: 10px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 14px; padding: 12px 18px; transition: all 0.2s; white-space: nowrap; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; }
   .btn-primary { background: var(--accent); color: #fff; }
   .btn-primary:active { transform: scale(0.97); }
   .btn-primary:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; transform: none; }
-  .btn-qr { background: var(--surface2); border: 1px solid var(--border); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-qr { background: var(--surface2); border: 1px solid var(--border); color: var(--text); }
   .btn-qr:active { background: var(--border); }
   .btn-qr.scanning { background: rgba(245,158,58,0.15); border-color: var(--warn); color: var(--warn); }
 
-  /* QR Scanner */
-  .qr-wrap { display: none; margin-top: 12px; border-radius: 12px; overflow: hidden; position: relative; background: #000; }
+  /* QR scanner container */
+  .qr-wrap { display: none; margin-top: 14px; border-radius: 12px; overflow: hidden; position: relative; }
   .qr-wrap.open { display: block; }
-  #qrVideo { width: 100%; display: block; max-height: 260px; object-fit: cover; }
-  #qrCanvas { display: none; }
-  .qr-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; pointer-events: none; }
-  .qr-frame {
-    width: 170px; height: 170px; border: 2px solid var(--warn); border-radius: 12px;
-    box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); position: relative;
+  #qr-reader { width: 100% !important; border: none !important; background: #000; }
+  #qr-reader video { border-radius: 0 !important; }
+  /* ライブラリのデフォルトUIを非表示 */
+  #qr-reader__dashboard_section_csr span,
+  #qr-reader__dashboard_section_fsr,
+  #qr-reader__status_span { display: none !important; }
+  #qr-reader img { display: none !important; }
+  #qr-reader__camera_selection { display: none !important; }
+  #qr-reader__header_message { display: none !important; }
+  #qr-reader__dashboard { display: none !important; }
+
+  .qr-close-btn {
+    position: absolute; top: 10px; right: 10px; z-index: 20;
+    background: rgba(0,0,0,0.65); border: none; color: #fff;
+    border-radius: 50%; width: 34px; height: 34px; font-size: 17px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .qr-frame.found { border-color: var(--success); box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px var(--success); }
-  .qr-hint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; color: rgba(255,255,255,0.7); pointer-events: none; }
-  .qr-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: #fff; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+  .qr-hint {
+    text-align: center; font-size: 12px; color: var(--text3);
+    padding: 8px; background: var(--surface2);
+  }
 
   .status { border-radius: 10px; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; display: none; align-items: center; gap: 8px; }
   .status.show { display: flex; }
@@ -60,7 +72,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   .result-header { background: linear-gradient(135deg,rgba(79,142,247,0.15),rgba(124,92,191,0.1)); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
-  .row-badge { background: var(--accent); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+  .row-badge { background: var(--accent); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; flex-shrink: 0; }
   .result-key { font-size: 13px; color: var(--text2); font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .fields { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
   .field-label { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
@@ -90,15 +102,10 @@
         <button class="btn btn-primary" onclick="doSearch()" id="searchBtn">検索</button>
       </div>
 
-      <!-- Live QR Scanner -->
       <div class="qr-wrap" id="qrWrap">
-        <video id="qrVideo" playsinline autoplay muted></video>
-        <canvas id="qrCanvas"></canvas>
-        <div class="qr-overlay">
-          <div class="qr-frame" id="qrFrame"></div>
-        </div>
-        <div class="qr-hint">QRコードを枠内に合わせてください</div>
-        <button class="qr-close" onclick="stopQR()">✕</button>
+        <div id="qr-reader"></div>
+        <button class="qr-close-btn" onclick="stopQR()">✕</button>
+        <div class="qr-hint">📷 QRコードをカメラに近づけてください</div>
       </div>
     </div>
   </div>
@@ -125,55 +132,46 @@
 <script>
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzVyfwZOJYs9PSTFdJgRh8tkgzFBoCfGQcncr46A8x4EZDoVwleybHDgw4OoJOKTxQd/exec";
 let currentKey = "";
-let qrStream = null;
-let qrTimer = null;
+let html5QrCode = null;
 let qrActive = false;
 
 async function toggleQR() {
-  if (qrActive) { stopQR(); return; }
+  if (qrActive) { await stopQR(); return; }
+
+  document.getElementById("qrWrap").classList.add("open");
+  const btn = document.getElementById("qrBtn");
+  btn.classList.add("scanning");
+  btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg> スキャン中...`;
+  qrActive = true;
+
+  html5QrCode = new Html5Qrcode("qr-reader");
   try {
-    qrStream = await navigator.mediaDevices.getUserMedia({
-      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
-    });
-    document.getElementById("qrVideo").srcObject = qrStream;
-    document.getElementById("qrWrap").classList.add("open");
-    const btn = document.getElementById("qrBtn");
-    btn.classList.add("scanning");
-    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg> スキャン中...`;
-    qrActive = true;
-    qrTimer = setInterval(scanFrame, 150);
+    await html5QrCode.start(
+      { facingMode: "environment" },
+      { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
+      (decodedText) => {
+        document.getElementById("searchInput").value = decodedText.trim();
+        stopQR();
+        setTimeout(() => doSearch(), 300);
+      },
+      () => {} // エラーは無視
+    );
   } catch(e) {
     showStatus("error", "❌ カメラにアクセスできません");
+    await stopQR();
   }
 }
 
-function stopQR() {
-  clearInterval(qrTimer);
-  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+async function stopQR() {
+  if (html5QrCode) {
+    try { await html5QrCode.stop(); } catch(e) {}
+    html5QrCode = null;
+  }
   document.getElementById("qrWrap").classList.remove("open");
   const btn = document.getElementById("qrBtn");
   btn.classList.remove("scanning");
   btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg> QRコード読込`;
   qrActive = false;
-}
-
-function scanFrame() {
-  const video = document.getElementById("qrVideo");
-  const canvas = document.getElementById("qrCanvas");
-  if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
-  canvas.width = video.videoWidth;
-  canvas.height = video.videoHeight;
-  const ctx = canvas.getContext("2d");
-  ctx.drawImage(video, 0, 0);
-  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
-  if (code) {
-    const frame = document.getElementById("qrFrame");
-    frame.classList.add("found");
-    document.getElementById("searchInput").value = code.data.trim();
-    stopQR();
-    setTimeout(() => doSearch(), 300);
-  }
 }
 
 function showStatus(type, msg) {
