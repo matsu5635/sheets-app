@@ -53,22 +53,39 @@
   .fields{padding:16px;display:flex;flex-direction:column;gap:14px;}
   .field-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
   .col-tag{background:var(--surface2);border:1px solid var(--border);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);padding:1px 6px;}
-  /* フィールド入力行：テキストボックス＋カメラボタン */
   .field-row{display:flex;gap:8px;align-items:stretch;}
   .field-row input{flex:1;padding-right:14px!important;}
-  .btn-cam{
-    background:rgba(66,133,244,.15);border:1px solid rgba(66,133,244,.4);
-    border-radius:10px;color:var(--gemini);font-size:18px;
-    width:46px;flex-shrink:0;cursor:pointer;
-    display:flex;align-items:center;justify-content:center;
-    transition:all .2s;
-  }
+  .btn-cam{background:rgba(66,133,244,.15);border:1px solid rgba(66,133,244,.4);border-radius:10px;color:var(--gemini);font-size:18px;width:46px;flex-shrink:0;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;}
   .btn-cam:active{background:rgba(66,133,244,.3);}
-  .btn-cam.loading{opacity:.5;cursor:not-allowed;}
   .btn-cam.done{background:rgba(52,199,132,.2);border-color:rgba(52,199,132,.5);color:var(--success);}
   .save-area{padding:0 16px 16px;}
   .btn-success{background:var(--success);color:#0a1a10;width:100%;padding:14px;font-size:15px;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-weight:700;transition:all .2s;}
   .btn-success:disabled{background:var(--surface2);color:var(--text3);cursor:not-allowed;}
+
+  /* ── テキスト選択モーダル ── */
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:200;display:none;flex-direction:column;}
+  .modal-overlay.open{display:flex;}
+  .modal-camera{position:relative;flex:1;overflow:hidden;background:#000;}
+  .modal-camera video{width:100%;height:100%;object-fit:cover;display:block;}
+  .modal-camera canvas{display:none;}
+  .shutter-bar{position:absolute;bottom:0;left:0;right:0;padding:16px;display:flex;justify-content:center;align-items:center;gap:16px;background:linear-gradient(transparent,rgba(0,0,0,.7));}
+  .shutter-btn{width:66px;height:66px;border-radius:50%;background:#fff;border:4px solid rgba(255,255,255,.5);cursor:pointer;transition:transform .1s;}
+  .shutter-btn:active{transform:scale(.9);}
+  .modal-close-cam{position:absolute;top:14px;left:14px;background:rgba(0,0,0,.6);border:none;color:#fff;border-radius:50%;width:36px;height:36px;font-size:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+  .modal-analyzing{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;}
+  .modal-analyzing.show{display:flex;}
+  .modal-analyzing p{color:#fff;font-size:14px;font-weight:700;}
+
+  .modal-result{display:none;flex-direction:column;background:var(--surface);max-height:60vh;}
+  .modal-result.show{display:flex;}
+  .modal-result-header{padding:14px 16px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+  .modal-result-title{font-size:13px;font-weight:700;color:var(--text2);}
+  .modal-result-close{background:none;border:none;color:var(--text3);font-size:20px;cursor:pointer;}
+  .modal-preview{width:100%;max-height:160px;object-fit:cover;display:block;}
+  .text-chips{padding:12px 16px;display:flex;flex-wrap:wrap;gap:8px;overflow-y:auto;flex:1;}
+  .text-chip{background:var(--surface2);border:1px solid var(--border);border-radius:20px;padding:8px 14px;font-size:14px;cursor:pointer;transition:all .2s;font-family:'JetBrains Mono',monospace;}
+  .text-chip:active{background:var(--accent);border-color:var(--accent);color:#fff;transform:scale(.97);}
+  .retake-btn{margin:0 16px 16px;background:var(--surface2);border:1px solid var(--border);border-radius:10px;color:var(--text2);font-family:'Noto Sans JP',sans-serif;font-weight:700;font-size:13px;padding:11px;cursor:pointer;}
 </style>
 </head>
 <body>
@@ -115,32 +132,28 @@
         <div class="field-label"><span class="col-tag">D</span>D列</div>
         <div class="field-row">
           <input type="text" id="fieldD" placeholder="（空）" />
-          <button class="btn-cam" id="camD" onclick="triggerOCR('D')" title="カメラで読取">📷</button>
-          <input type="file" id="ocrD" accept="image/*" capture="environment" onchange="doOCR(event,'D')" style="display:none" />
+          <button class="btn-cam" id="camD" onclick="openLens('D')" title="カメラで読取">📷</button>
         </div>
       </div>
       <div>
         <div class="field-label"><span class="col-tag">E</span>E列</div>
         <div class="field-row">
           <input type="text" id="fieldE" placeholder="（空）" />
-          <button class="btn-cam" id="camE" onclick="triggerOCR('E')" title="カメラで読取">📷</button>
-          <input type="file" id="ocrE" accept="image/*" capture="environment" onchange="doOCR(event,'E')" style="display:none" />
+          <button class="btn-cam" id="camE" onclick="openLens('E')" title="カメラで読取">📷</button>
         </div>
       </div>
       <div>
         <div class="field-label"><span class="col-tag">F</span>F列</div>
         <div class="field-row">
           <input type="text" id="fieldF" placeholder="（空）" />
-          <button class="btn-cam" id="camF" onclick="triggerOCR('F')" title="カメラで読取">📷</button>
-          <input type="file" id="ocrF" accept="image/*" capture="environment" onchange="doOCR(event,'F')" style="display:none" />
+          <button class="btn-cam" id="camF" onclick="openLens('F')" title="カメラで読取">📷</button>
         </div>
       </div>
       <div>
         <div class="field-label"><span class="col-tag">G</span>G列</div>
         <div class="field-row">
           <input type="text" id="fieldG" placeholder="（空）" />
-          <button class="btn-cam" id="camG" onclick="triggerOCR('G')" title="カメラで読取">📷</button>
-          <input type="file" id="ocrG" accept="image/*" capture="environment" onchange="doOCR(event,'G')" style="display:none" />
+          <button class="btn-cam" id="camG" onclick="openLens('G')" title="カメラで読取">📷</button>
         </div>
       </div>
     </div>
@@ -150,72 +163,139 @@
   </div>
 </div>
 
+<!-- テキスト選択モーダル -->
+<div class="modal-overlay" id="lensModal">
+  <!-- カメラビュー -->
+  <div class="modal-camera" id="lensCamera">
+    <video id="lensVideo" playsinline autoplay muted></video>
+    <canvas id="lensCanvas"></canvas>
+    <div class="modal-analyzing" id="lensAnalyzing">
+      <div class="spin" style="font-size:36px">⟳</div>
+      <p>Geminiがテキストを認識中...</p>
+    </div>
+    <button class="modal-close-cam" onclick="closeLens()">✕</button>
+    <div class="shutter-bar">
+      <button class="shutter-btn" onclick="captureFrame()" id="shutterBtn"></button>
+    </div>
+  </div>
+  <!-- テキスト選択ビュー -->
+  <div class="modal-result" id="lensResult">
+    <img id="lensPreview" class="modal-preview" />
+    <div class="modal-result-header">
+      <span class="modal-result-title">📝 タップして入力するテキストを選択</span>
+      <button class="modal-result-close" onclick="closeLens()">✕</button>
+    </div>
+    <div class="text-chips" id="textChips"></div>
+    <button class="retake-btn" onclick="retake()">🔄 撮り直す</button>
+  </div>
+</div>
+
 <script>
 // ★ 設定 ★
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzVyfwZOJYs9PSTFdJgRh8tkgzFBoCfGQcncr46A8x4EZDoVwleybHDgw4OoJOKTxQd/exec";
-const GEMINI_API_KEY = "AIzaSyD2so7TRyqTsNp3GrWRqfIbK8v5lv_2B5A";
+const GEMINI_API_KEY = "★ここにGemini APIキーを貼り付け★";
 
 let currentKey = "";
 let html5QrCode = null;
 let qrActive = false;
+let lensStream = null;
+let lensTargetCol = "";
 
-// ── OCR per field ──
-function triggerOCR(col) {
-  const field = document.getElementById("field" + col);
-  // 値がある場合はスキップ
-  if (field.value.trim() !== "") {
-    showStatus("ocr", col + "列にすでに値があります。手動で変更してください。", false);
-    return;
+// ── Lens Modal ──
+async function openLens(col) {
+  lensTargetCol = col;
+  document.getElementById("lensModal").classList.add("open");
+  document.getElementById("lensCamera").style.display = "block";
+  document.getElementById("lensResult").classList.remove("show");
+  document.getElementById("lensAnalyzing").classList.remove("show");
+
+  try {
+    lensStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } }
+    });
+    document.getElementById("lensVideo").srcObject = lensStream;
+  } catch(e) {
+    showStatus("error", "❌ カメラにアクセスできません", true);
+    closeLens();
   }
-  document.getElementById("ocr" + col).click();
 }
 
-async function doOCR(event, col) {
-  const file = event.target.files[0];
-  if (!file) return;
-  event.target.value = "";
+function closeLens() {
+  if (lensStream) { lensStream.getTracks().forEach(t => t.stop()); lensStream = null; }
+  document.getElementById("lensModal").classList.remove("open");
+}
 
-  const cam = document.getElementById("cam" + col);
-  cam.classList.add("loading");
-  cam.textContent = "⟳";
-  showStatus("ocr", '<span class="spin">⟳</span>&nbsp; ' + col + '列をGeminiで読み取り中...', false);
+function retake() {
+  document.getElementById("lensResult").classList.remove("show");
+  document.getElementById("lensCamera").style.display = "block";
+}
 
-  const reader = new FileReader();
-  reader.onload = async (e) => {
-    const base64 = e.target.result.split(",")[1];
-    const mimeType = file.type || "image/jpeg";
-    try {
-      const res = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{
-              parts: [
-                { inline_data: { mime_type: mimeType, data: base64 } },
-                { text: "この画像に書かれているLot番号（ロット番号）を読み取ってください。Lot番号のみを回答してください。余計な説明は不要です。記号や特殊文字も含めてそのまま出力してください。" }
-              ]
-            }]
-          })
-        }
-      );
-      const json = await res.json();
-      if (json.error) throw new Error(json.error.message);
-      const lotValue = json.candidates[0].content.parts[0].text.trim();
-      document.getElementById("field" + col).value = lotValue;
-      cam.classList.remove("loading");
-      cam.classList.add("done");
-      cam.textContent = "✅";
-      setTimeout(() => { cam.classList.remove("done"); cam.textContent = "📷"; }, 3000);
-      showStatus("ok", "✅ " + col + "列に認識結果を入力しました：" + lotValue, false);
-    } catch(e) {
-      cam.classList.remove("loading");
-      cam.textContent = "📷";
-      showStatus("error", "❌ OCRエラー：" + e.message, true);
-    }
-  };
-  reader.readAsDataURL(file);
+async function captureFrame() {
+  const video = document.getElementById("lensVideo");
+  const canvas = document.getElementById("lensCanvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext("2d").drawImage(video, 0, 0);
+
+  const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+  const base64 = dataUrl.split(",")[1];
+
+  document.getElementById("lensPreview").src = dataUrl;
+  document.getElementById("lensAnalyzing").classList.add("show");
+  document.getElementById("shutterBtn").disabled = true;
+
+  try {
+    const res = await fetch(
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { inline_data: { mime_type: "image/jpeg", data: base64 } },
+              { text: "この画像に含まれるすべてのテキスト・数字・記号を読み取り、それぞれを改行区切りで出力してください。単語や番号など意味のある単位で区切ってください。説明不要。テキストのみ出力。" }
+            ]
+          }]
+        })
+      }
+    );
+    const json = await res.json();
+    if (json.error) throw new Error(json.error.message);
+
+    const rawText = json.candidates[0].content.parts[0].text.trim();
+    const lines = rawText.split(/[\n,、。]+/).map(s => s.trim()).filter(s => s.length > 0);
+
+    const chips = document.getElementById("textChips");
+    chips.innerHTML = "";
+    lines.forEach(text => {
+      const chip = document.createElement("button");
+      chip.className = "text-chip";
+      chip.textContent = text;
+      chip.onclick = () => selectText(text);
+      chips.appendChild(chip);
+    });
+
+    document.getElementById("lensAnalyzing").classList.remove("show");
+    document.getElementById("lensCamera").style.display = "none";
+    document.getElementById("lensResult").classList.add("show");
+  } catch(e) {
+    document.getElementById("lensAnalyzing").classList.remove("show");
+    showStatus("error", "❌ 認識エラー：" + e.message, true);
+    closeLens();
+  }
+  document.getElementById("shutterBtn").disabled = false;
+}
+
+function selectText(text) {
+  const field = document.getElementById("field" + lensTargetCol);
+  field.value = text;
+  const cam = document.getElementById("cam" + lensTargetCol);
+  cam.classList.add("done");
+  cam.textContent = "✅";
+  setTimeout(() => { cam.classList.remove("done"); cam.textContent = "📷"; }, 3000);
+  showStatus("ok", "✅ " + lensTargetCol + "列に入力しました：" + text, false);
+  closeLens();
 }
 
 // ── Search input ──
@@ -232,6 +312,7 @@ function resetAll() {
   document.getElementById("saveBtn").disabled = false;
   currentKey = "";
   stopQR();
+  closeLens();
   document.getElementById("searchInput").focus();
 }
 
