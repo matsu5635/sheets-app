@@ -124,7 +124,7 @@
 <script>
 // ★ 設定 ★
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzVyfwZOJYs9PSTFdJgRh8tkgzFBoCfGQcncr46A8x4EZDoVwleybHDgw4OoJOKTxQd/exec";
-const GEMINI_API_KEY = "AIzaSyD2so7TRyqTsNp3GrWRqfIbK8v5lv_2B5A";
+const GEMINI_API_KEY = "★ここにGemini APIキーを貼り付け★";
 
 let currentKey = "";
 let html5QrCode = null;
@@ -149,7 +149,7 @@ async function doOCR(event) {
 
     try {
       const res = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=" + GEMINI_API_KEY,
+        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
