@@ -238,9 +238,12 @@ async function captureFrame() {
   document.getElementById("shutterBtn").disabled = true;
 
   try {
-    // GAS経由でOCR（APIキーはGAS内に隠蔵）
-    const url = GAS_URL + "?action=ocr&mime=image/jpeg&image=" + encodeURIComponent(base64);
-    const res = await fetch(url);
+    // GAS経由でOCR（POSTで画像送信）
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "ocr", image: base64 })
+    });
     const json = await res.json();
     if (!json.success) throw new Error(json.error || "認識失敗");
 
