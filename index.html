@@ -188,7 +188,7 @@ async function toggleQR() {
       { facingMode: "environment" },
       { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
       (decodedText) => {
-        const clean = decodedText.trim().replace(/^["']|["']$/g, "");
+        const clean = decodedText.trim();
         document.getElementById("searchInput").value = clean;
         document.getElementById("clearBtn").classList.add("show");
         stopQR();
@@ -215,7 +215,7 @@ async function stopQR() {
 }
 
 async function doSearch() {
-  const key = document.getElementById("searchInput").value.trim().replace(/^["']|["']$/g, "");
+  const key = document.getElementById("searchInput").value.trim();
   if (!key) { showStatus("error", "❌ 検索キーワードを入力してください", false); return; }
   document.getElementById("searchBtn").disabled = true;
   document.getElementById("resultCard").style.display = "none";
