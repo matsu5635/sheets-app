@@ -9,7 +9,7 @@
 <style>
   :root {
     --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3350;
-    --accent: #4f8ef7; --success: #34c784; --warn: #f59e3a;
+    --accent: #4f8ef7; --success: #34c784; --warn: #f59e3a; --danger: #ef4444;
     --text: #e8eaf0; --text2: #8b90a8; --text3: #555b78; --radius: 14px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -21,13 +21,21 @@
   .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
   .search-area { padding: 16px; }
   .label { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+
+  .input-wrap { position: relative; }
   input[type="text"] {
     width: 100%; background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
     color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-size: 15px;
-    padding: 12px 14px; outline: none; transition: border-color 0.2s;
+    padding: 12px 40px 12px 14px; outline: none; transition: border-color 0.2s;
   }
   input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.12); }
   input[type="text"]::placeholder { color: var(--text3); }
+  .clear-btn {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    background: none; border: none; color: var(--text3); font-size: 18px;
+    cursor: pointer; padding: 4px; line-height: 1; display: none;
+  }
+  .clear-btn.show { display: block; }
 
   .btn-group { display: flex; gap: 8px; margin-top: 10px; }
   .btn { border: none; border-radius: 10px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 14px; padding: 12px 18px; transition: all 0.2s; white-space: nowrap; flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; }
@@ -38,42 +46,42 @@
   .btn-qr:active { background: var(--border); }
   .btn-qr.scanning { background: rgba(245,158,58,0.15); border-color: var(--warn); color: var(--warn); }
 
-  /* QR scanner container */
+  /* QR scanner */
   .qr-wrap { display: none; margin-top: 14px; border-radius: 12px; overflow: hidden; position: relative; }
   .qr-wrap.open { display: block; }
   #qr-reader { width: 100% !important; border: none !important; background: #000; }
-  #qr-reader video { border-radius: 0 !important; }
-  /* ライブラリのデフォルトUIを非表示 */
-  #qr-reader__dashboard_section_csr span,
-  #qr-reader__dashboard_section_fsr,
-  #qr-reader__status_span { display: none !important; }
-  #qr-reader img { display: none !important; }
-  #qr-reader__camera_selection { display: none !important; }
-  #qr-reader__header_message { display: none !important; }
   #qr-reader__dashboard { display: none !important; }
-
+  #qr-reader__header_message { display: none !important; }
   .qr-close-btn {
     position: absolute; top: 10px; right: 10px; z-index: 20;
     background: rgba(0,0,0,0.65); border: none; color: #fff;
     border-radius: 50%; width: 34px; height: 34px; font-size: 17px;
     cursor: pointer; display: flex; align-items: center; justify-content: center;
   }
-  .qr-hint {
-    text-align: center; font-size: 12px; color: var(--text3);
-    padding: 8px; background: var(--surface2);
-  }
+  .qr-hint { text-align: center; font-size: 12px; color: var(--text3); padding: 8px; background: var(--surface2); }
 
+  /* Status */
   .status { border-radius: 10px; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; display: none; align-items: center; gap: 8px; }
-  .status.show { display: flex; }
+  .status.show { display: flex; justify-content: space-between; }
   .status.loading { background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.3); color: var(--accent); }
   .status.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
   .status.ok { background: rgba(52,199,132,0.1); border: 1px solid rgba(52,199,132,0.3); color: var(--success); }
+  .status-msg { display: flex; align-items: center; gap: 8px; flex: 1; }
+  .reset-btn {
+    background: rgba(255,255,255,0.1); border: none; border-radius: 6px;
+    color: inherit; font-family: 'Noto Sans JP', sans-serif; font-size: 12px; font-weight: 700;
+    padding: 4px 10px; cursor: pointer; white-space: nowrap; flex-shrink: 0;
+  }
+  .reset-btn:active { background: rgba(255,255,255,0.2); }
   .spin { display: inline-block; animation: spin 0.8s linear infinite; }
   @keyframes spin { to { transform: rotate(360deg); } }
 
+  /* Result */
   .result-header { background: linear-gradient(135deg,rgba(79,142,247,0.15),rgba(124,92,191,0.1)); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
   .row-badge { background: var(--accent); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; flex-shrink: 0; }
-  .result-key { font-size: 13px; color: var(--text2); font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .result-key { font-size: 13px; color: var(--text2); font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+  .result-reset { background: rgba(255,255,255,0.08); border: none; border-radius: 6px; color: var(--text3); font-family: 'Noto Sans JP', sans-serif; font-size: 11px; font-weight: 700; padding: 4px 10px; cursor: pointer; flex-shrink: 0; }
+  .result-reset:active { background: rgba(255,255,255,0.15); }
   .fields { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
   .field-label { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
   .col-tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); padding: 1px 6px; }
@@ -93,7 +101,12 @@
   <div class="card">
     <div class="search-area">
       <div class="label">🔍 A列で検索（完全一致）</div>
-      <input type="text" id="searchInput" placeholder="キーワードを手入力" onkeydown="if(event.key==='Enter')doSearch()" />
+      <div class="input-wrap">
+        <input type="text" id="searchInput" placeholder="キーワードを手入力"
+          oninput="onInput()"
+          onkeydown="if(event.key==='Enter')doSearch()" />
+        <button class="clear-btn" id="clearBtn" onclick="resetAll()" title="リセット">✕</button>
+      </div>
       <div class="btn-group">
         <button class="btn btn-qr" id="qrBtn" onclick="toggleQR()">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg>
@@ -101,7 +114,6 @@
         </button>
         <button class="btn btn-primary" onclick="doSearch()" id="searchBtn">検索</button>
       </div>
-
       <div class="qr-wrap" id="qrWrap">
         <div id="qr-reader"></div>
         <button class="qr-close-btn" onclick="stopQR()">✕</button>
@@ -110,12 +122,16 @@
     </div>
   </div>
 
-  <div class="status" id="status"></div>
+  <div class="status" id="status">
+    <span class="status-msg" id="statusMsg"></span>
+    <button class="reset-btn" id="resetBtn" onclick="resetAll()" style="display:none">🔄 リセット</button>
+  </div>
 
   <div class="card" id="resultCard" style="display:none">
     <div class="result-header">
       <span class="row-badge" id="rowBadge">ROW —</span>
       <span class="result-key" id="resultKey"></span>
+      <button class="result-reset" onclick="resetAll()">🔄 リセット</button>
     </div>
     <div class="fields">
       <div><div class="field-label"><span class="col-tag">D</span>D列</div><input type="text" id="fieldD" placeholder="（空）" /></div>
@@ -135,29 +151,53 @@ let currentKey = "";
 let html5QrCode = null;
 let qrActive = false;
 
+function onInput() {
+  const val = document.getElementById("searchInput").value;
+  document.getElementById("clearBtn").classList.toggle("show", val.length > 0);
+}
+
+function resetAll() {
+  document.getElementById("searchInput").value = "";
+  document.getElementById("clearBtn").classList.remove("show");
+  document.getElementById("status").className = "status";
+  document.getElementById("resultCard").style.display = "none";
+  document.getElementById("searchBtn").disabled = false;
+  document.getElementById("saveBtn").disabled = false;
+  currentKey = "";
+  stopQR();
+  document.getElementById("searchInput").focus();
+}
+
+function showStatus(type, msg, showReset = false) {
+  const el = document.getElementById("status");
+  el.className = "status show " + type;
+  document.getElementById("statusMsg").innerHTML = msg;
+  document.getElementById("resetBtn").style.display = showReset ? "block" : "none";
+}
+
 async function toggleQR() {
   if (qrActive) { await stopQR(); return; }
-
   document.getElementById("qrWrap").classList.add("open");
   const btn = document.getElementById("qrBtn");
   btn.classList.add("scanning");
   btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg> スキャン中...`;
   qrActive = true;
-
   html5QrCode = new Html5Qrcode("qr-reader");
   try {
     await html5QrCode.start(
       { facingMode: "environment" },
       { fps: 10, qrbox: { width: 220, height: 220 }, aspectRatio: 1.0 },
       (decodedText) => {
-        document.getElementById("searchInput").value = decodedText.trim();
+        const clean = decodedText.trim().replace(/^["']|["']$/g, "");
+        document.getElementById("searchInput").value = clean;
+        document.getElementById("clearBtn").classList.add("show");
         stopQR();
         setTimeout(() => doSearch(), 300);
       },
-      () => {} // エラーは無視
+      () => {}
     );
   } catch(e) {
-    showStatus("error", "❌ カメラにアクセスできません");
+    showStatus("error", "❌ カメラにアクセスできません", true);
     await stopQR();
   }
 }
@@ -174,22 +214,20 @@ async function stopQR() {
   qrActive = false;
 }
 
-function showStatus(type, msg) {
-  const el = document.getElementById("status");
-  el.className = "status show " + type;
-  el.innerHTML = msg;
-}
-
 async function doSearch() {
-  const key = document.getElementById("searchInput").value.trim();
-  if (!key) { showStatus("error", "❌ 検索キーワードを入力してください"); return; }
+  const key = document.getElementById("searchInput").value.trim().replace(/^["']|["']$/g, "");
+  if (!key) { showStatus("error", "❌ 検索キーワードを入力してください", false); return; }
   document.getElementById("searchBtn").disabled = true;
   document.getElementById("resultCard").style.display = "none";
   showStatus("loading", '<span class="spin">⟳</span>&nbsp; 検索中...');
   try {
     const res = await fetch(GAS_URL + "?key=" + encodeURIComponent(key));
     const json = await res.json();
-    if (!json.success) { showStatus("error", `❌ "${key}" は見つかりませんでした`); return; }
+    if (!json.success) {
+      showStatus("error", `❌ "${key}" は見つかりませんでした`, true);
+      document.getElementById("searchBtn").disabled = false;
+      return;
+    }
     currentKey = key;
     document.getElementById("rowBadge").textContent = `ROW ${json.row}`;
     document.getElementById("resultKey").textContent = key;
@@ -198,15 +236,15 @@ async function doSearch() {
     document.getElementById("fieldF").value = json.F ?? "";
     document.getElementById("fieldG").value = json.G ?? "";
     document.getElementById("resultCard").style.display = "block";
-    showStatus("ok", `✅ ${json.row}行目で見つかりました`);
+    showStatus("ok", `✅ ${json.row}行目で見つかりました`, false);
   } catch(e) {
-    showStatus("error", "❌ " + e.message);
+    showStatus("error", "❌ " + e.message, true);
   }
   document.getElementById("searchBtn").disabled = false;
 }
 
 async function saveData() {
-  if (!currentKey) { showStatus("error", "❌ まず検索してください"); return; }
+  if (!currentKey) { showStatus("error", "❌ まず検索してください", false); return; }
   document.getElementById("saveBtn").disabled = true;
   showStatus("loading", '<span class="spin">⟳</span>&nbsp; 保存中...');
   try {
@@ -222,10 +260,10 @@ async function saveData() {
       }),
     });
     const json = await res.json();
-    if (json.success) showStatus("ok", `✅ ${json.row}行目を保存しました`);
-    else showStatus("error", "❌ " + (json.error || "保存に失敗しました"));
+    if (json.success) showStatus("ok", `✅ ${json.row}行目を保存しました`, false);
+    else showStatus("error", "❌ " + (json.error || "保存に失敗しました"), true);
   } catch(e) {
-    showStatus("error", "❌ " + e.message);
+    showStatus("error", "❌ " + e.message, true);
   }
   document.getElementById("saveBtn").disabled = false;
 }
