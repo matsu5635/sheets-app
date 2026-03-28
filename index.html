@@ -30,18 +30,12 @@
   .btn-primary:disabled{background:var(--surface2);color:var(--text3);cursor:not-allowed;transform:none;}
   .btn-qr{background:var(--surface2);border:1px solid var(--border);color:var(--text);}
   .btn-qr.scanning{background:rgba(245,158,58,.15);border-color:var(--warn);color:var(--warn);}
-  .btn-ocr{background:rgba(66,133,244,.15);border:1px solid rgba(66,133,244,.4);color:var(--gemini);}
-  .btn-ocr.loading{opacity:.6;cursor:not-allowed;}
   .qr-wrap{display:none;margin-top:14px;border-radius:12px;overflow:hidden;position:relative;}
   .qr-wrap.open{display:block;}
   #qr-reader{width:100%!important;border:none!important;background:#000;}
   #qr-reader__dashboard,#qr-reader__header_message{display:none!important;}
   .qr-close-btn{position:absolute;top:10px;right:10px;z-index:20;background:rgba(0,0,0,.65);border:none;color:#fff;border-radius:50%;width:34px;height:34px;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
   .qr-hint{text-align:center;font-size:12px;color:var(--text3);padding:8px;background:var(--surface2);}
-  .ocr-preview{display:none;margin-top:12px;border-radius:10px;overflow:hidden;}
-  .ocr-preview.show{display:block;}
-  .ocr-preview img{width:100%;border-radius:10px 10px 0 0;display:block;max-height:180px;object-fit:cover;}
-  .ocr-badge{background:rgba(66,133,244,.9);color:#fff;font-size:13px;font-weight:700;padding:8px 12px;display:flex;align-items:center;gap:6px;border-radius:0 0 10px 10px;}
   .status{border-radius:10px;font-size:13px;padding:10px 14px;margin-bottom:14px;display:none;align-items:center;}
   .status.show{display:flex;justify-content:space-between;}
   .status.loading{background:rgba(79,142,247,.1);border:1px solid rgba(79,142,247,.3);color:var(--accent);}
@@ -56,9 +50,22 @@
   .row-badge{background:var(--accent);color:#fff;font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600;padding:3px 8px;border-radius:6px;flex-shrink:0;}
   .result-key{font-size:13px;color:var(--text2);font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
   .result-reset{background:rgba(255,255,255,.08);border:none;border-radius:6px;color:var(--text3);font-family:'Noto Sans JP',sans-serif;font-size:11px;font-weight:700;padding:4px 10px;cursor:pointer;flex-shrink:0;}
-  .fields{padding:16px;display:flex;flex-direction:column;gap:12px;}
+  .fields{padding:16px;display:flex;flex-direction:column;gap:14px;}
   .field-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;display:flex;align-items:center;gap:6px;}
   .col-tag{background:var(--surface2);border:1px solid var(--border);border-radius:5px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--accent);padding:1px 6px;}
+  /* フィールド入力行：テキストボックス＋カメラボタン */
+  .field-row{display:flex;gap:8px;align-items:stretch;}
+  .field-row input{flex:1;padding-right:14px!important;}
+  .btn-cam{
+    background:rgba(66,133,244,.15);border:1px solid rgba(66,133,244,.4);
+    border-radius:10px;color:var(--gemini);font-size:18px;
+    width:46px;flex-shrink:0;cursor:pointer;
+    display:flex;align-items:center;justify-content:center;
+    transition:all .2s;
+  }
+  .btn-cam:active{background:rgba(66,133,244,.3);}
+  .btn-cam.loading{opacity:.5;cursor:not-allowed;}
+  .btn-cam.done{background:rgba(52,199,132,.2);border-color:rgba(52,199,132,.5);color:var(--success);}
   .save-area{padding:0 16px 16px;}
   .btn-success{background:var(--success);color:#0a1a10;width:100%;padding:14px;font-size:15px;border:none;border-radius:10px;cursor:pointer;font-family:'Noto Sans JP',sans-serif;font-weight:700;transition:all .2s;}
   .btn-success:disabled{background:var(--surface2);color:var(--text3);cursor:not-allowed;}
@@ -82,13 +89,7 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg>
           QR読込
         </button>
-        <label class="btn btn-ocr" id="ocrLabel" for="ocrInput">📷 LOT撮影</label>
-        <input type="file" id="ocrInput" accept="image/*" capture="environment" onchange="doOCR(event)" style="display:none" />
         <button class="btn btn-primary" onclick="doSearch()" id="searchBtn">検索</button>
-      </div>
-      <div class="ocr-preview" id="ocrPreview">
-        <img id="ocrImg" />
-        <div class="ocr-badge" id="ocrBadge"></div>
       </div>
       <div class="qr-wrap" id="qrWrap">
         <div id="qr-reader"></div>
@@ -110,10 +111,38 @@
       <button class="result-reset" onclick="resetAll()">🔄 リセット</button>
     </div>
     <div class="fields">
-      <div><div class="field-label"><span class="col-tag">D</span>D列</div><input type="text" id="fieldD" placeholder="（空）" /></div>
-      <div><div class="field-label"><span class="col-tag">E</span>E列</div><input type="text" id="fieldE" placeholder="（空）" /></div>
-      <div><div class="field-label"><span class="col-tag">F</span>F列</div><input type="text" id="fieldF" placeholder="（空）" /></div>
-      <div><div class="field-label"><span class="col-tag">G</span>G列</div><input type="text" id="fieldG" placeholder="（空）" /></div>
+      <div>
+        <div class="field-label"><span class="col-tag">D</span>D列</div>
+        <div class="field-row">
+          <input type="text" id="fieldD" placeholder="（空）" />
+          <button class="btn-cam" id="camD" onclick="triggerOCR('D')" title="カメラで読取">📷</button>
+          <input type="file" id="ocrD" accept="image/*" capture="environment" onchange="doOCR(event,'D')" style="display:none" />
+        </div>
+      </div>
+      <div>
+        <div class="field-label"><span class="col-tag">E</span>E列</div>
+        <div class="field-row">
+          <input type="text" id="fieldE" placeholder="（空）" />
+          <button class="btn-cam" id="camE" onclick="triggerOCR('E')" title="カメラで読取">📷</button>
+          <input type="file" id="ocrE" accept="image/*" capture="environment" onchange="doOCR(event,'E')" style="display:none" />
+        </div>
+      </div>
+      <div>
+        <div class="field-label"><span class="col-tag">F</span>F列</div>
+        <div class="field-row">
+          <input type="text" id="fieldF" placeholder="（空）" />
+          <button class="btn-cam" id="camF" onclick="triggerOCR('F')" title="カメラで読取">📷</button>
+          <input type="file" id="ocrF" accept="image/*" capture="environment" onchange="doOCR(event,'F')" style="display:none" />
+        </div>
+      </div>
+      <div>
+        <div class="field-label"><span class="col-tag">G</span>G列</div>
+        <div class="field-row">
+          <input type="text" id="fieldG" placeholder="（空）" />
+          <button class="btn-cam" id="camG" onclick="triggerOCR('G')" title="カメラで読取">📷</button>
+          <input type="file" id="ocrG" accept="image/*" capture="environment" onchange="doOCR(event,'G')" style="display:none" />
+        </div>
+      </div>
     </div>
     <div class="save-area">
       <button class="btn-success" onclick="saveData()" id="saveBtn">💾 シートに保存</button>
@@ -130,23 +159,31 @@ let currentKey = "";
 let html5QrCode = null;
 let qrActive = false;
 
-// ── OCR (Gemini) ──
-async function doOCR(event) {
+// ── OCR per field ──
+function triggerOCR(col) {
+  const field = document.getElementById("field" + col);
+  // 値がある場合はスキップ
+  if (field.value.trim() !== "") {
+    showStatus("ocr", col + "列にすでに値があります。手動で変更してください。", false);
+    return;
+  }
+  document.getElementById("ocr" + col).click();
+}
+
+async function doOCR(event, col) {
   const file = event.target.files[0];
   if (!file) return;
   event.target.value = "";
+
+  const cam = document.getElementById("cam" + col);
+  cam.classList.add("loading");
+  cam.textContent = "⟳";
+  showStatus("ocr", '<span class="spin">⟳</span>&nbsp; ' + col + '列をGeminiで読み取り中...', false);
 
   const reader = new FileReader();
   reader.onload = async (e) => {
     const base64 = e.target.result.split(",")[1];
     const mimeType = file.type || "image/jpeg";
-
-    document.getElementById("ocrImg").src = e.target.result;
-    document.getElementById("ocrBadge").innerHTML = '<span class="spin">⟳</span>&nbsp; GeminiがLot番号を読み取り中...';
-    document.getElementById("ocrPreview").classList.add("show");
-    document.getElementById("ocrLabel").classList.add("loading");
-    showStatus("ocr", '<span class="spin">⟳</span>&nbsp; 画像からLot番号を認識中...', false);
-
     try {
       const res = await fetch(
         "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY,
@@ -166,20 +203,22 @@ async function doOCR(event) {
       const json = await res.json();
       if (json.error) throw new Error(json.error.message);
       const lotValue = json.candidates[0].content.parts[0].text.trim();
-      document.getElementById("ocrBadge").innerHTML = "✅ 認識結果：" + lotValue;
-      document.getElementById("searchInput").value = lotValue;
-      document.getElementById("clearBtn").classList.add("show");
-      showStatus("ocr", "🤖 Gemini認識結果：<strong>" + lotValue + "</strong>　← 確認して検索してください", false);
+      document.getElementById("field" + col).value = lotValue;
+      cam.classList.remove("loading");
+      cam.classList.add("done");
+      cam.textContent = "✅";
+      setTimeout(() => { cam.classList.remove("done"); cam.textContent = "📷"; }, 3000);
+      showStatus("ok", "✅ " + col + "列に認識結果を入力しました：" + lotValue, false);
     } catch(e) {
-      document.getElementById("ocrBadge").innerHTML = "❌ 認識に失敗しました";
+      cam.classList.remove("loading");
+      cam.textContent = "📷";
       showStatus("error", "❌ OCRエラー：" + e.message, true);
     }
-    document.getElementById("ocrLabel").classList.remove("loading");
   };
   reader.readAsDataURL(file);
 }
 
-// ── UI helpers ──
+// ── Search input ──
 function onInput() {
   document.getElementById("clearBtn").classList.toggle("show", document.getElementById("searchInput").value.length > 0);
 }
@@ -191,7 +230,6 @@ function resetAll() {
   document.getElementById("resultCard").style.display = "none";
   document.getElementById("searchBtn").disabled = false;
   document.getElementById("saveBtn").disabled = false;
-  document.getElementById("ocrPreview").classList.remove("show");
   currentKey = "";
   stopQR();
   document.getElementById("searchInput").focus();
