@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>スプレッドシート検索・編集</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
+<style>
+  :root {
+    --bg: #0f1117; --surface: #1a1d27; --surface2: #22263a; --border: #2e3350;
+    --accent: #4f8ef7; --success: #34c784; --warn: #f59e3a; --danger: #ef4444;
+    --text: #e8eaf0; --text2: #8b90a8; --text3: #555b78; --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Noto Sans JP', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; padding-bottom: 40px; }
+  .header { background: linear-gradient(135deg,#1a1d27,#12152a); border-bottom: 1px solid var(--border); padding: 20px; position: sticky; top: 0; z-index: 100; }
+  .header-title { font-size: 17px; font-weight: 700; display: flex; align-items: center; gap: 8px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 8px var(--accent); }
+  .main { padding: 20px; max-width: 520px; margin: 0 auto; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
+
+  /* Search */
+  .search-area { padding: 16px; }
+  .label { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 8px; }
+  .input-row { display: flex; gap: 8px; }
+  .input-row input { flex: 1; }
+  input[type="text"] {
+    background: var(--surface2); border: 1px solid var(--border); border-radius: 10px;
+    color: var(--text); font-family: 'Noto Sans JP', sans-serif; font-size: 15px;
+    padding: 12px 14px; outline: none; transition: border-color 0.2s; width: 100%;
+  }
+  input[type="text"]:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,142,247,0.12); }
+  input[type="text"]::placeholder { color: var(--text3); }
+
+  .btn-group { display: flex; gap: 8px; margin-top: 10px; }
+  .btn { border: none; border-radius: 10px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; font-size: 14px; padding: 12px 18px; transition: all 0.2s; white-space: nowrap; flex: 1; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:active { transform: scale(0.97); }
+  .btn-primary:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; transform: none; }
+  .btn-qr { background: var(--surface2); border: 1px solid var(--border); color: var(--text); display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .btn-qr:active { background: var(--border); }
+  .btn-qr.scanning { background: rgba(245,158,58,0.15); border-color: var(--warn); color: var(--warn); }
+
+  /* QR Scanner */
+  .qr-scanner { display: none; margin-top: 12px; border-radius: 12px; overflow: hidden; position: relative; background: #000; }
+  .qr-scanner.open { display: block; }
+  .qr-scanner video { width: 100%; display: block; max-height: 280px; object-fit: cover; }
+  .qr-scanner canvas { display: none; }
+  .qr-overlay {
+    position: absolute; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: none;
+  }
+  .qr-frame {
+    width: 180px; height: 180px;
+    border: 2px solid var(--warn);
+    border-radius: 12px;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+    position: relative;
+  }
+  .qr-frame::before, .qr-frame::after {
+    content: '';
+    position: absolute;
+    width: 24px; height: 24px;
+    border-color: var(--warn);
+    border-style: solid;
+  }
+  .qr-frame::before { top: -2px; left: -2px; border-width: 3px 0 0 3px; border-radius: 4px 0 0 0; }
+  .qr-frame::after  { bottom: -2px; right: -2px; border-width: 0 3px 3px 0; border-radius: 0 0 4px 0; }
+  .qr-hint { position: absolute; bottom: 12px; left: 0; right: 0; text-align: center; font-size: 12px; color: rgba(255,255,255,0.7); }
+  .qr-close { position: absolute; top: 10px; right: 10px; background: rgba(0,0,0,0.6); border: none; color: #fff; border-radius: 50%; width: 32px; height: 32px; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; z-index: 10; }
+
+  /* Status */
+  .status { border-radius: 10px; font-size: 13px; padding: 10px 14px; margin-bottom: 14px; display: none; align-items: center; gap: 8px; }
+  .status.show { display: flex; }
+  .status.loading { background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.3); color: var(--accent); }
+  .status.error { background: rgba(239,68,68,0.1); border: 1px solid rgba(239,68,68,0.3); color: #f87171; }
+  .status.ok { background: rgba(52,199,132,0.1); border: 1px solid rgba(52,199,132,0.3); color: var(--success); }
+  .spin { display: inline-block; animation: spin 0.8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Result */
+  .result-header { background: linear-gradient(135deg,rgba(79,142,247,0.15),rgba(124,92,191,0.1)); border-bottom: 1px solid var(--border); padding: 12px 16px; display: flex; align-items: center; gap: 10px; }
+  .row-badge { background: var(--accent); color: #fff; font-family: 'JetBrains Mono', monospace; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 6px; }
+  .result-key { font-size: 13px; color: var(--text2); font-family: 'JetBrains Mono', monospace; }
+  .fields { padding: 16px; display: flex; flex-direction: column; gap: 12px; }
+  .field-label { font-size: 11px; font-weight: 700; color: var(--text3); letter-spacing: 0.1em; text-transform: uppercase; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+  .col-tag { background: var(--surface2); border: 1px solid var(--border); border-radius: 5px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--accent); padding: 1px 6px; }
+  .save-area { padding: 0 16px 16px; }
+  .btn-success { background: var(--success); color: #0a1a10; width: 100%; padding: 14px; font-size: 15px; border: none; border-radius: 10px; cursor: pointer; font-family: 'Noto Sans JP', sans-serif; font-weight: 700; transition: all 0.2s; }
+  .btn-success:active { transform: scale(0.98); }
+  .btn-success:disabled { background: var(--surface2); color: var(--text3); cursor: not-allowed; }
+
+  /* QR result flash */
+  @keyframes flashGreen {
+    0% { border-color: var(--success); box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), 0 0 20px var(--success); }
+    100% { border-color: var(--warn); box-shadow: 0 0 0 9999px rgba(0,0,0,0.45); }
+  }
+  .qr-frame.found { animation: flashGreen 0.4s ease; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-title"><div class="dot"></div>スプレッドシート検索・編集</div>
+</div>
+
+<div class="main">
+
+  <div class="card">
+    <div class="search-area">
+      <div class="label">🔍 A列で検索（完全一致）</div>
+      <div class="input-row">
+        <input type="text" id="searchInput" placeholder="キーワードを手入力" onkeydown="if(event.key==='Enter')doSearch()" />
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-qr" id="qrBtn" onclick="toggleQR()">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg>
+          QRコード読込
+        </button>
+        <button class="btn btn-primary" onclick="doSearch()" id="searchBtn">検索</button>
+      </div>
+
+      <!-- QR Scanner -->
+      <div class="qr-scanner" id="qrScanner">
+        <video id="qrVideo" playsinline autoplay muted></video>
+        <canvas id="qrCanvas"></canvas>
+        <div class="qr-overlay">
+          <div class="qr-frame" id="qrFrame"></div>
+        </div>
+        <div class="qr-hint">QRコードを枠内に合わせてください</div>
+        <button class="qr-close" onclick="stopQR()">✕</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="status" id="status"></div>
+
+  <div class="card" id="resultCard" style="display:none">
+    <div class="result-header">
+      <span class="row-badge" id="rowBadge">ROW —</span>
+      <span class="result-key" id="resultKey"></span>
+    </div>
+    <div class="fields">
+      <div><div class="field-label"><span class="col-tag">D</span>D列</div><input type="text" id="fieldD" placeholder="（空）" /></div>
+      <div><div class="field-label"><span class="col-tag">E</span>E列</div><input type="text" id="fieldE" placeholder="（空）" /></div>
+      <div><div class="field-label"><span class="col-tag">F</span>F列</div><input type="text" id="fieldF" placeholder="（空）" /></div>
+      <div><div class="field-label"><span class="col-tag">G</span>G列</div><input type="text" id="fieldG" placeholder="（空）" /></div>
+    </div>
+    <div class="save-area">
+      <button class="btn-success" onclick="saveData()" id="saveBtn">💾 シートに保存</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzVyfwZOJYs9PSTFdJgRh8tkgzFBoCfGQcncr46A8x4EZDoVwleybHDgw4OoJOKTxQd/exec";
+
+let currentKey = "";
+let qrStream = null;
+let qrTimer = null;
+let qrScanning = false;
+
+// ── QR Scanner ──
+async function toggleQR() {
+  if (qrScanning) { stopQR(); return; }
+  const scanner = document.getElementById("qrScanner");
+  const btn = document.getElementById("qrBtn");
+  try {
+    qrStream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById("qrVideo");
+    video.srcObject = qrStream;
+    scanner.classList.add("open");
+    btn.classList.add("scanning");
+    btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg> スキャン中...`;
+    qrScanning = true;
+    qrTimer = setInterval(scanFrame, 200);
+  } catch(e) {
+    showStatus("error", "❌ カメラにアクセスできません（権限を許可してください）");
+  }
+}
+
+function stopQR() {
+  clearInterval(qrTimer);
+  if (qrStream) { qrStream.getTracks().forEach(t => t.stop()); qrStream = null; }
+  document.getElementById("qrScanner").classList.remove("open");
+  const btn = document.getElementById("qrBtn");
+  btn.classList.remove("scanning");
+  btn.innerHTML = `<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h2v2h-2zM18 14h3M14 18h2M18 18h3v3M21 14v2"/></svg> QRコード読込`;
+  qrScanning = false;
+}
+
+function scanFrame() {
+  const video = document.getElementById("qrVideo");
+  const canvas = document.getElementById("qrCanvas");
+  if (video.readyState !== video.HAVE_ENOUGH_DATA) return;
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  const ctx = canvas.getContext("2d");
+  ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  const code = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "dontInvert" });
+  if (code) {
+    const frame = document.getElementById("qrFrame");
+    frame.classList.add("found");
+    setTimeout(() => frame.classList.remove("found"), 400);
+
+    const val = code.data.trim();
+    document.getElementById("searchInput").value = val;
+    stopQR();
+    // 自動検索
+    setTimeout(() => doSearch(), 300);
+  }
+}
+
+// ── Search & Save ──
+function showStatus(type, msg) {
+  const el = document.getElementById("status");
+  el.className = "status show " + type;
+  el.innerHTML = msg;
+}
+
+async function doSearch() {
+  const key = document.getElementById("searchInput").value.trim();
+  if (!key) { showStatus("error", "❌ 検索キーワードを入力してください"); return; }
+  document.getElementById("searchBtn").disabled = true;
+  document.getElementById("resultCard").style.display = "none";
+  showStatus("loading", '<span class="spin">⟳</span>&nbsp; 検索中...');
+  try {
+    const res = await fetch(GAS_URL + "?key=" + encodeURIComponent(key));
+    const json = await res.json();
+    if (!json.success) { showStatus("error", `❌ "${key}" は見つかりませんでした`); return; }
+    currentKey = key;
+    document.getElementById("rowBadge").textContent = `ROW ${json.row}`;
+    document.getElementById("resultKey").textContent = key;
+    document.getElementById("fieldD").value = json.D ?? "";
+    document.getElementById("fieldE").value = json.E ?? "";
+    document.getElementById("fieldF").value = json.F ?? "";
+    document.getElementById("fieldG").value = json.G ?? "";
+    document.getElementById("resultCard").style.display = "block";
+    showStatus("ok", `✅ ${json.row}行目で見つかりました`);
+  } catch(e) {
+    showStatus("error", "❌ " + e.message);
+  }
+  document.getElementById("searchBtn").disabled = false;
+}
+
+async function saveData() {
+  if (!currentKey) { showStatus("error", "❌ まず検索してください"); return; }
+  document.getElementById("saveBtn").disabled = true;
+  showStatus("loading", '<span class="spin">⟳</span>&nbsp; 保存中...');
+  try {
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        searchKey: currentKey,
+        D: document.getElementById("fieldD").value,
+        E: document.getElementById("fieldE").value,
+        F: document.getElementById("fieldF").value,
+        G: document.getElementById("fieldG").value,
+      }),
+    });
+    const json = await res.json();
+    if (json.success) showStatus("ok", `✅ ${json.row}行目を保存しました`);
+    else showStatus("error", "❌ " + (json.error || "保存に失敗しました"));
+  } catch(e) {
+    showStatus("error", "❌ " + e.message);
+  }
+  document.getElementById("saveBtn").disabled = false;
+}
+</script>
+</body>
+</html>
