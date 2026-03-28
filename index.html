@@ -6,6 +6,7 @@
 <title>スプレッドシート検索・編集</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+<script src="https://unpkg.com/tesseract.js@5/dist/tesseract.min.js"></script>
 <style>
   :root{--bg:#0f1117;--surface:#1a1d27;--surface2:#22263a;--border:#2e3350;--accent:#4f8ef7;--success:#34c784;--warn:#f59e3a;--gemini:#4285f4;--text:#e8eaf0;--text2:#8b90a8;--text3:#555b78;--radius:14px;}
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -189,7 +190,6 @@
 <script>
 // ★ GASのURLのみ（APIキーはGAS側に隠蔵）
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzVyfwZOJYs9PSTFdJgRh8tkgzFBoCfGQcncr46A8x4EZDoVwleybHDgw4OoJOKTxQd/exec";
-const GEMINI_API_KEY = "AIzaSyBpvJL9gAT8GEoqIWEWItUsdyR5GkG_bhk";
 
 let currentKey = "";
 let html5QrCode = null;
@@ -239,20 +239,15 @@ async function captureFrame() {
   document.getElementById("shutterBtn").disabled = true;
 
   try {
-    // Gemini APIに直接送信
-    const res = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=" + GEMINI_API_KEY,
-      { method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({contents:[{parts:[
-          {inline_data:{mime_type:"image/jpeg", data:base64}},
-          {text:"この画像に含まれるすべてのテキスト・数字・記号を改行区切りで出力。説明不要。"}
-        ]}]})
-      }
+    // Tesseract.jsでOCR（APIキー不要）
+    const { data: { text } } = await Tesseract.recognize(
+      document.getElementById("lensPreview").src,
+      "eng",
+      { logger: () => {} }
     );
-    const json = await res.json();
-    if (!json.success) throw new Error(json.error || "認識失敗");
+    if (!text.trim()) throw new Error("テキストが認識できませんでした");
 
-    const lines = json.text.split(/[\n,、。]+/).map(s => s.trim()).filter(s => s.length > 0);
+    const lines = text.split(/[\n\r]+/).map(s => s.trim()).filter(s => s.length > 0);
     const chips = document.getElementById("textChips");
     chips.innerHTML = "";
     lines.forEach(text => {
